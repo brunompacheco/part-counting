@@ -64,6 +64,10 @@ test_environment:
 #################################################################################
 
 
+## Start jupyter server
+jupyter:
+	screen -S jupyter -X stuff "jupyter notebook --ip=150.162.14.54\n"
+
 
 #################################################################################
 # Self Documenting Commands                                                     #
