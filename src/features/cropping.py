@@ -85,3 +85,43 @@ def pick_similar_lines(angles: np.array, dists: np.array, n=4, eps=0.02
     best_dists = dists[best_i]
 
     return best_angles, best_dists
+
+def get_box_mask(shape: tuple,
+                 h_lines: Tuple[np.array, np.array],
+                 v_lines: Tuple[np.array, np.array]) -> np.ndarray:
+    """Generate mask of area delimited by given lines.
+
+    Args:
+        shape: shape of the image for the mask.
+        h_lines: horizontal lines that delimit the area of interest.
+        v_lines: vertical lines that delimit the area of interest.
+
+    Return:
+        mask: binary mask of the region of interest.
+    """
+    idx = np.indices(shape)
+    mask = np.ones(shape).astype(bool)
+
+    for angle, dist in zip(*v_lines):
+        (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
+        slope = np.tan(angle + np.pi/2)
+
+        f = lambda y: x0 + (y - y0) * (1/slope)
+
+        if f(shape[1] / 2) < shape[0] / 2:
+            mask = mask & (idx[1] > f(idx[0]))
+        else:
+            mask = mask & (idx[1] < f(idx[0]))
+
+    for angle, dist in zip(*h_lines):
+        (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
+        slope = np.tan(angle + np.pi/2)
+
+        f = lambda x: y0 + (x - x0)*slope
+
+        if f(shape[0] / 2) < shape[1] / 2:
+            mask = mask & (idx[0] > f(idx[1]))
+        else:
+            mask = mask & (idx[0] < f(idx[1]))
+    
+    return mask
