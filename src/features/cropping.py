@@ -40,7 +40,6 @@ def get_lines(image: np.ndarray, canny_sigma=1, angle_range=np.pi/8
 
     return (v_angles, v_dists), (h_angles, h_dists)
 
-
 def pick_similar_lines(angles: np.array, dists: np.array, n=4, eps=0.02
     ) -> Tuple[np.array, np.array]:
     """Pick `n` lines closest to being parallel to each other.
@@ -54,7 +53,7 @@ def pick_similar_lines(angles: np.array, dists: np.array, n=4, eps=0.02
         dists: lines' distances (hough transform representation).
         n: number of lines to be selected.
         eps: see sklearn's DBSCAN.
-    
+
     Returns:
         best_angles: angles of the `n` lines selected.
         best_dists: distances of the `n` lines selected.
@@ -91,6 +90,10 @@ def get_box_mask(shape: tuple,
                  v_lines: Tuple[np.array, np.array]) -> np.ndarray:
     """Generate mask of area delimited by given lines.
 
+    One mask is generated for each line, partitioning the area in two. Each
+    mask is such that the center point of the image is always in the positive
+    area. The resulting mask is the combinantion (AND) of all masks.
+
     Args:
         shape: shape of the image for the mask.
         h_lines: horizontal lines that delimit the area of interest.
@@ -106,8 +109,10 @@ def get_box_mask(shape: tuple,
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         slope = np.tan(angle + np.pi/2)
 
+        # get line function
         f = lambda y: x0 + (y - y0) * (1/slope)
 
+        # generate line-related mask
         if f(shape[1] / 2) < shape[0] / 2:
             mask = mask & (idx[1] > f(idx[0]))
         else:
@@ -117,11 +122,13 @@ def get_box_mask(shape: tuple,
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         slope = np.tan(angle + np.pi/2)
 
+        # get line function
         f = lambda x: y0 + (x - x0)*slope
 
+        # generate line-related mask
         if f(shape[0] / 2) < shape[1] / 2:
             mask = mask & (idx[0] > f(idx[1]))
         else:
             mask = mask & (idx[0] < f(idx[1]))
-    
+
     return mask
