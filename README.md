@@ -1,7 +1,12 @@
-part_counting
+[WIP] part_counting
 ==============================
 
-Part counting in RGBD images.
+Two approaches are proposed to counting parts in an RGBD image. The goal is to properly estimate the amount of parts, all of the same geometry, in a steel box. All images were generated through renders of simulations, using blender.
+
+One approach is to use computer vision "traditional" techniques to achieve the estimate. Registration algorithms are used to "dig" the part's geometry from the surface measured (depth channel).
+
+The other is to use straightforward deep learning (convolutional encoder with fully-connected decoder). The problem is easily framed as a superviserd learning, regression task.
+
 
 Project Organization
 ------------
