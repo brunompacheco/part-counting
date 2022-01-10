@@ -4,7 +4,18 @@ import open3d as o3d
 from pathlib import Path
 
 
-def load_rgbd(image_fpath: Path, depth_scale=711.1111111 / 0.05):
+def load_rgbd(image_fpath: Path, depth_scale=711.1111111 / 0.05
+    ) -> o3d.geometry.RGBDImage:
+    """Load .png image and build Open3D's RGBDImage.
+
+    Args:
+        image_fpath: path to .png with grayscale in the blue channel and depth
+        in the green channel.
+        depth_scale: see `o3d.geometry.RGBDImage.create_from_color_and_depth`.
+    
+    Returns:
+        rgbd: Open3D RGBD image.
+    """
     image = o3d.io.read_image(str(image_fpath))
     image_data = np.asarray(image)
 
