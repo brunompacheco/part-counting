@@ -27,8 +27,8 @@ requirements: test_environment
 ## Make Dataset
 data: requirements
 	rm -f /data/renders.hdf5
-	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/raw/render_results /data/renders.hdf5
-	rm data/interim/.
+	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/raw/render_results /data/renders.hdf5 --split
+	rm data/interim/renders.hdf5
 	ln -s /data/renders.hdf5 data/interim/.
 	chmod a-w,ug+r /data/renders.hdf5
 
