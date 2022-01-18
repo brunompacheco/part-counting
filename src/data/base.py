@@ -15,7 +15,8 @@ class FimacDataset(Dataset):
                  hdf5_dataset_name='renders') -> None:
         super().__init__()
 
-        self._data = h5py.File(str(hdf5_fpath), "r")[hdf5_dataset_name]
+        self._hdf5_file = h5py.File(str(hdf5_fpath), "r")
+        self._hdf5_dataset_name = hdf5_dataset_name
 
         self.transform = T.Compose([
             T.ToTensor(),
@@ -23,6 +24,10 @@ class FimacDataset(Dataset):
             # check https://pytorch.org/vision/stable/models.html
             T.Normalize(mean=[0.485, 0.456], std=[0.229, 0.224]),
         ])
+    
+    @property
+    def _data(self) -> h5py.Dataset:
+        return self._hdf5_file[self._hdf5_dataset_name]
 
     def __len__(self) -> int:
         return self._data.shape[0] * self._data.shape[1]
@@ -40,5 +45,4 @@ class FimacDataset(Dataset):
         return image, label
 
     def __del__(self) -> None:
-        self._data.close()
-        super().__del__()
+        self._hdf5_file.close()
