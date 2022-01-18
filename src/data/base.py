@@ -12,11 +12,11 @@ from torchvision import transforms as T
 
 class FimacDataset(Dataset):
     def __init__(self, hdf5_fpath: Union[Path, str],
-                 hdf5_dataset_name='renders') -> None:
+                 test=False) -> None:
         super().__init__()
 
         self._hdf5_file = h5py.File(str(hdf5_fpath), "r")
-        self._hdf5_dataset_name = hdf5_dataset_name
+        self._hdf5_dataset_name = 'test' if test else 'train'
 
         self.transform = T.Compose([
             T.ToTensor(),
