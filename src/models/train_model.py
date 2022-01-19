@@ -169,9 +169,11 @@ def main(epochs):
             f"{epoch_end_time - epoch_start_time:.2f} seconds"
         )
 
-        # TODO: save model and checkpoints, see https://pytorch.org/tutorials/recipes/recipes/saving_and_loading_models_for_inference.html and https://pytorch.org/tutorials/recipes/recipes/saving_and_loading_a_general_checkpoint.html
-        # TODO: implement continue training (sync wandb and torch)
+    model_fpath = project_dir/f"{wandb.run.name}__{config['model']}.pth"
+    torch.save(net.state_dict(), model_fpath)
+    logger.info(f"Model saved at {model_fpath}")
 
+    wandb.finish()
     logger.info('Training finished!')
 
 
