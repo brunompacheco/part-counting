@@ -1,1 +1,1 @@
-from .base import TestNet, EffNetRegressor
+from .base import TestNet, EffNetRegressor, load_model, get_model_class

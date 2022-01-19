@@ -1,5 +1,8 @@
 """Network definitions.
 """
+from pathlib import Path
+from typing import Union
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -78,3 +81,20 @@ class EffNetRegressor(nn.Module):
         x = self.model(x)
 
         return x
+
+def get_model_class(model: str) -> nn.Module:
+    return eval(model)
+
+def load_model(model_fpath: Union[str, Path]) -> nn.Module:
+    """Instantiate model and load parameters.
+
+    Args:
+        model_fpath: path to the saved `state_dict` of a model. Expected in
+        format `{wandb_run_name}__{model_class_name}.pth`.
+    """
+    model_fpath = Path(model_fpath)
+
+    model = get_model_class(model_fpath.name.split('__')[-1])
+    model.load_state_dict(torch.load(model_fpath))
+
+    return model
