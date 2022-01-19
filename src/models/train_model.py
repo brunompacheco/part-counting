@@ -85,8 +85,6 @@ def main(epochs, frac):
     """
     logger = logging.getLogger(__name__)
 
-    assert frac <= 1 and frac > 0, '`frac` must be <=1 and >0'
-
     # training hyperparameters
     batch_size = 16
     lr = 0.001
@@ -95,9 +93,7 @@ def main(epochs, frac):
     dataset = FimacDataset(project_dir/'data/interim/renders.hdf5')
 
     # get fraction of the data
-    indices = np.random.choice(np.arange(len(dataset)), int(frac*len(dataset)),
-                               replace=False)
-    dataset = Subset(dataset, indices)
+    dataset = dataset.subset(frac)
 
     # split train into train and validation
     train_val_split = .8
@@ -180,7 +176,7 @@ def main(epochs, frac):
             f"{epoch_end_time - epoch_start_time:.2f} seconds"
         )
 
-    model_fpath = project_dir/f"{wandb.run.name}__{config['model']}.pth"
+    model_fpath = project_dir/f"models/{wandb.run.name}__{config['model']}.pth"
     torch.save(net.state_dict(), model_fpath)
     logger.info(f"Model saved at {model_fpath}")
 
