@@ -1,1 +1,1 @@
-from .base import TestNet
+from .base import TestNet, EffNetRegressor

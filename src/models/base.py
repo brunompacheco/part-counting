@@ -38,3 +38,43 @@ class TestNet(nn.Module):
         x = self.fc2(x)
 
         return x
+
+class EffNetRegressor(nn.Module):
+    """Regression model that uses EfficientNet as a (fixed) feature extractor.
+
+    An input layer is added (Conv2d+BN) to adapt our 2-channel image to the 3
+    channels EffNet is expecting. Also, the classifier is replaced by a
+    regressor, for obvious reasons. Finally, I freeze the remaining weights
+    *except* for the `stem` block.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.input = nn.Sequential(
+            # adapt our 2-channel images to effnet 3 channels
+            nn.Conv2d(2, 3, 3, 1),
+            nn.BatchNorm2d(3),
+        )
+
+        self.effnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub',
+                                     'nvidia_efficientnet_b0',
+                                     pretrained=True)
+
+        # change EffNet classifier to a regressor
+        self.model.classifier.fc = nn.Sequential(
+            nn.Linear(1280, 40),
+            nn.ReLU(),
+            nn.Linear(40, 1),
+        )
+
+        # freeze EffNet's layers and features
+        for param in self.effnet.layers.parameters():
+            param.requires_grad = False
+        for param in self.effnet.features.parameters():
+            param.requires_grad = False
+
+    def forward(self, x):
+        x = self.input(x)
+        x = self.model(x)
+
+        return x
