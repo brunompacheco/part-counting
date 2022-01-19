@@ -26,11 +26,22 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def int_MAE(y, y_hat):
-    err = y.type(torch.IntTensor) - y_hat.type(torch.IntTensor)    
+    y_hat_int = y_hat.squeeze().type(torch.IntTensor) + 0.5
+    y_int = y.type(torch.IntTensor)
+
+    err = y_int - y_hat_int
     err = err.abs()
     err = err.type(torch.FloatTensor).mean()
 
     return err.item()
+
+def acc(y, y_hat):
+    y_hat_int = y_hat.squeeze().type(torch.IntTensor) + 0.5
+    y_int = y.type(torch.IntTensor)
+
+    matches = y_int == y_hat_int
+
+    return matches.sum() / len(matches)
 
 def train_pass(net, dataloader, criterion, optimizer, scaler):
     train_loss = 0
@@ -48,16 +59,17 @@ def train_pass(net, dataloader, criterion, optimizer, scaler):
 
             scaler.scale(loss).backward()
 
-            train_loss += loss.item() / len(y)  # scales to data size
+            train_loss += loss.item() * len(y)
 
             scaler.step(optimizer)
             scaler.update()
 
-    return train_loss
+    return train_loss / len(dataloader.dataset)  # scales to data size
 
 def validation_pass(net, dataloader, criterion):
     val_loss = 0
     val_MAE = 0
+    val_acc = 0
     net.eval()
     with torch.set_grad_enabled(False):
         for X, y in dataloader:
@@ -71,10 +83,12 @@ def validation_pass(net, dataloader, criterion):
                     y.type(torch.float32)
                 ).item()
 
-            val_loss += loss_value / len(y)  # scales to data size
-            val_MAE += int_MAE(y, y_hat.squeeze()) / len(y)
+            val_loss += loss_value * len(y)  # scales to data size
+            val_MAE += int_MAE(y, y_hat.squeeze()) * len(y)
+            val_acc += acc(y, y_hat.squeeze()) * len(y)
 
-    return val_loss,val_MAE
+    len_data = len(dataloader.dataset)
+    return val_loss / len_data, val_MAE / len_data, val_acc / len_data
 
 @click.command()
 @click.argument('epochs', type=click.INT)
@@ -158,16 +172,18 @@ def main(epochs, frac):
 
         # validation
         start_time = time()
-        val_loss, val_MAE = validation_pass(net, val_dataloader, criterion)
+        val_loss, val_MAE, val_acc = validation_pass(net, val_dataloader, criterion)
         end_time = time()
 
         logger.info(f"Validation pass took {end_time - start_time:.3f} seconds")
         logger.info(f"Validation loss = {val_loss}")
         logger.info(f"Validation MAE = {val_MAE}")
+        logger.info(f"Validation accuracy = {100 * val_acc:.2f} %")
 
         wandb.log({
             "val_loss": val_loss,
             "val_MAE": val_MAE,
+            "val_acc": val_acc,
         }, step=epoch, commit=True)
 
         epoch_end_time = time()
