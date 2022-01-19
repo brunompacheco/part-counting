@@ -94,7 +94,8 @@ def load_model(model_fpath: Union[str, Path]) -> nn.Module:
     """
     model_fpath = Path(model_fpath)
 
-    model = get_model_class(model_fpath.name.split('__')[-1])
+    model_name = model_fpath.name.split('__')[-1].split('.')[0]
+    model = get_model_class(model_name)()
     model.load_state_dict(torch.load(model_fpath))
 
     return model
