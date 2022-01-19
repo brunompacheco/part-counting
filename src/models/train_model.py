@@ -4,12 +4,13 @@ import logging
 from pathlib import Path
 from time import time
 
+import numpy as np
 import torch
 import torch.nn as nn
 import wandb
 
 from dotenv import load_dotenv, find_dotenv
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, Subset
 from torch.cuda.amp import autocast, GradScaler
 
 from src.data import FimacDataset
@@ -77,10 +78,14 @@ def validation_pass(net, dataloader, criterion):
 
 @click.command()
 @click.argument('epochs', type=click.INT)
-def main(epochs):
+@click.option('--frac', type=click.FLOAT, default=1.0,
+              help='Fraction of the data to be used (train + validation).')
+def main(epochs, frac):
     """Train a model in the Fimac render dataset.
     """
     logger = logging.getLogger(__name__)
+
+    assert frac <= 1 and frac > 0, '`frac` must be <=1 and >0'
 
     # training hyperparameters
     batch_size = 16
@@ -88,6 +93,11 @@ def main(epochs):
     criterion = nn.L1Loss()
 
     dataset = FimacDataset(project_dir/'data/interim/renders.hdf5')
+
+    # get fraction of the data
+    indices = np.random.choice(np.arange(len(dataset)), int(frac*len(dataset)),
+                               replace=False)
+    dataset = Subset(dataset, indices)
 
     # split train into train and validation
     train_val_split = .8
@@ -110,6 +120,7 @@ def main(epochs):
 
     config = {
         "learning_rate": lr,
+        "data_fraction": frac,
         "epochs": epochs,
         "batch_size": batch_size,
         "model": type(net).__name__,
