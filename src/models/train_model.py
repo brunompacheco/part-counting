@@ -1,3 +1,4 @@
+import os
 import click
 import logging
 import random
@@ -119,6 +120,10 @@ def main(epochs, frac, checkpoint):
     """
     logger = logging.getLogger(__name__)
 
+    fileh = logging.FileHandler(os.environ['log_file'], 'a')
+    fileh.setFormatter(logging.Formatter(os.environ['log_fmt']))
+    logger.addHandler(fileh)
+
     if checkpoint is not None:
         checkpoint_fpath = checkpoint
         chk_name = Path(checkpoint_fpath).name
@@ -166,7 +171,7 @@ def main(epochs, frac, checkpoint):
 
         # hyperparameters
         batch_size = 16
-        lr = 0.001
+        lr = 0.0002
         criterion = nn.L1Loss()
 
         net = TestNet().to(device)
@@ -281,7 +286,6 @@ def main(epochs, frac, checkpoint):
 
 
 if __name__ == '__main__':
-    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
+    logging.basicConfig(level=logging.INFO, format=os.environ['log_fmt'])
 
     main()

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-from typing import List
+import os
 import click
 import json
 import logging
+
+from typing import List
 
 import h5py
 import numpy as np
@@ -81,6 +83,11 @@ def main(input_dir, output_filepath, compress, split):
         or not on the HDF5.
     """
     logger = logging.getLogger(__name__)
+
+    fileh = logging.FileHandler(os.environ['log_file'], 'a')
+    fileh.setFormatter(logging.Formatter(os.environ['log_fmt']))
+    logger.addHandler(fileh)
+
     logger.info('making HDF5 dataset from raw data')
 
     input_dir = Path(input_dir)
