@@ -1,5 +1,6 @@
 import click
 import logging
+import random
 
 from pathlib import Path
 from time import time
@@ -10,7 +11,7 @@ import torch.nn as nn
 import wandb
 
 from dotenv import load_dotenv, find_dotenv
-from torch.utils.data import DataLoader, random_split, Subset
+from torch.utils.data import DataLoader, random_split
 from torch.cuda.amp import autocast, GradScaler
 
 from src.data import FimacDataset
@@ -24,6 +25,10 @@ load_dotenv(dotenv_path)  # load up the entries as environment variables
 project_dir = Path(dotenv_path).parent
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+np.random.seed(42)
+random.seed(42)
+torch.manual_seed(42)
 
 
 def int_MAE(y, y_hat):
