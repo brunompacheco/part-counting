@@ -17,7 +17,7 @@ from torch.cuda.amp import autocast, GradScaler
 
 from src.data import FimacDataset
 from src.models import TestNet
-from src.models.base import get_model_class
+from src.models.base import EffNetRegressor, get_model_class
 
 # find .env automagically by walking up directories until it's found
 dotenv_path = find_dotenv()
@@ -27,9 +27,10 @@ project_dir = Path(dotenv_path).parent
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-np.random.seed(42)
-random.seed(42)
-torch.manual_seed(42)
+RANDOM_SEED = 42
+np.random.seed(RANDOM_SEED)
+random.seed(RANDOM_SEED)
+torch.manual_seed(RANDOM_SEED)
 
 
 def int_MAE(y, y_hat):
@@ -43,12 +44,12 @@ def int_MAE(y, y_hat):
     return err.item()
 
 def acc(y, y_hat):
-    y_hat_int = y_hat.squeeze().type(torch.IntTensor) + 0.5
+    y_hat_int = (y_hat.squeeze() + 0.5).type(torch.IntTensor)
     y_int = y.type(torch.IntTensor)
 
     matches = y_int == y_hat_int
 
-    return matches.sum() / len(matches)
+    return matches.sum().item() / len(matches)
 
 def train_pass(net, dataloader, criterion, optimizer, scaler):
     train_loss = 0
@@ -153,7 +154,10 @@ def main(epochs, frac, checkpoint):
         net.load_state_dict(checkpoint['model_state_dict'])
 
         optimizer = eval(f"torch.optim.{config['optimizer']}")
-        optimizer = optimizer(net.parameters(), lr=lr)
+        optimizer = optimizer(
+            filter(lambda p: p.requires_grad, net.parameters()),
+            lr=lr
+        )
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
         # initialize wandb
@@ -171,12 +175,15 @@ def main(epochs, frac, checkpoint):
 
         # hyperparameters
         batch_size = 16
-        lr = 0.0002
+        lr = 0.1
         criterion = nn.L1Loss()
 
-        net = TestNet().to(device)
+        net = EffNetRegressor().to(device)
 
-        optimizer = torch.optim.SGD(net.parameters(), lr=lr)
+        optimizer = torch.optim.SGD(
+            filter(lambda p: p.requires_grad, net.parameters()),
+            lr=lr
+        )
 
         config = {
             "learning_rate": lr,
@@ -210,16 +217,8 @@ def main(epochs, frac, checkpoint):
     logger.info('Preparing data')
     dataset = FimacDataset(project_dir/'data/interim/renders.hdf5')
 
-    # get fraction of the data
-    dataset = dataset.subset(frac)
-
-    # split train into train and validation
-    train_val_split = .8
-    train_size = int(len(dataset) * train_val_split)
-    train_data, val_data = random_split(
-        dataset,
-        (train_size, len(dataset) - train_size),
-    )
+    split_size = .8
+    train_data, val_data = dataset.subset_split(frac, split_size)
 
     # instantiate DataLoaders
     train_dataloader = DataLoader(train_data, batch_size=batch_size,
