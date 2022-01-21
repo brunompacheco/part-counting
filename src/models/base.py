@@ -64,7 +64,7 @@ class EffNetRegressor(nn.Module):
                                      pretrained=True)
 
         # change EffNet classifier to a regressor
-        self.model.classifier.fc = nn.Sequential(
+        self.effnet.classifier.fc = nn.Sequential(
             nn.Linear(1280, 40),
             nn.ReLU(),
             nn.Linear(40, 1),
@@ -78,7 +78,7 @@ class EffNetRegressor(nn.Module):
 
     def forward(self, x):
         x = self.input(x)
-        x = self.model(x)
+        x = self.effnet(x)
 
         return x
 
