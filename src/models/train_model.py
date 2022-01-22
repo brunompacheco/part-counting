@@ -114,9 +114,9 @@ def timeit(fun):
     'Fraction of the data to be used (train + validation). This option is '
     'overwritten if a checkpoint is loaded.'
 ))
-@click.option('--checkpoint', type=click.Path(exists=True),
-              help='Path to the checkpoint file.')
-def main(epochs, frac, checkpoint):
+@click.option('--resume', type=click.STRING,
+              help='Wandb run id of the experiment to resume.')
+def main(epochs, frac, resume):
     """Train a model in the Fimac render dataset.
     """
     logger = logging.getLogger(__name__)
@@ -125,49 +125,40 @@ def main(epochs, frac, checkpoint):
     fileh.setFormatter(logging.Formatter(os.environ['log_fmt']))
     logger.addHandler(fileh)
 
-    if checkpoint is not None:
-        checkpoint_fpath = checkpoint
-        chk_name = Path(checkpoint_fpath).name
-        run_name, model_name, _ = chk_name.replace('.tar', '').split('__')
-        checkpoint = torch.load(checkpoint_fpath)
-
-        config = checkpoint['config']
+    if resume is not None:
+        run_id = resume
+        wandb.init(
+            project="part-counting",
+            entity="brunompac",
+            id=run_id,
+            resume='must',
+        )
+        checkpoint_file = wandb.restore('checkpoint.tar')
+        checkpoint = torch.load(checkpoint_file.name)
 
         epoch = checkpoint['epoch'] + 1
 
-        logger.info(f'Resuming training of {run_name} at epoch {epoch}')
+        logger.info(f'Resuming training of {wandb.run.name} at epoch {epoch}')
 
-        # maybe I'll have to change this for lr decay techniques, but that's
-        # a problem for the future
-        epochs += epoch
-        config['epochs'] = epochs
+        # I'll just fix number of epochs for each training (experiments POV)
+        epochs = wandb.run.config['epochs']
 
         # load hyperparameters
-        batch_size = config['batch_size']
-        lr = config['learning_rate']
-        frac = config['data_fraction']
-        batch_size = config['batch_size']
+        lr = wandb.run.config['learning_rate']
+        frac = wandb.run.config['data_fraction']
+        batch_size = wandb.run.config['batch_size']
 
-        criterion = eval(f"nn.{config['loss_func']}()")
+        criterion = eval(f"nn.{wandb.run.config['loss_func']}()")
 
-        net = get_model_class(model_name)().to(device)
+        net = get_model_class(wandb.run.config['model'])().to(device)
         net.load_state_dict(checkpoint['model_state_dict'])
 
-        optimizer = eval(f"torch.optim.{config['optimizer']}")
+        optimizer = eval(f"torch.optim.{wandb.run.config['optimizer']}")
         optimizer = optimizer(
             filter(lambda p: p.requires_grad, net.parameters()),
             lr=lr
         )
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-
-        # initialize wandb
-        wandb.init(
-            project="part-counting",
-            entity="brunompac",
-            id=checkpoint['wandb_run_id'],
-            resume=True,
-        )
-        wandb.watch(net)
     else:
         logger.info('Setting up training')
 
@@ -175,7 +166,7 @@ def main(epochs, frac, checkpoint):
 
         # hyperparameters
         batch_size = 16
-        lr = 0.1
+        lr = 0.05
         criterion = nn.L1Loss()
 
         net = EffNetRegressor().to(device)
@@ -185,34 +176,30 @@ def main(epochs, frac, checkpoint):
             lr=lr
         )
 
-        config = {
-            "learning_rate": lr,
-            "data_fraction": frac,
-            "epochs": epochs,
-            "batch_size": batch_size,
-            "model": type(net).__name__,
-            "optimizer": type(optimizer).__name__,
-            "loss_func": type(criterion).__name__,
-        }
-
         # initialize wandb
         wandb.init(
             project="part-counting",
             entity="brunompac",
-            config=config,
+            config={
+                "learning_rate": lr,
+                "data_fraction": frac,
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "model": type(net).__name__,
+                "optimizer": type(optimizer).__name__,
+                "loss_func": type(criterion).__name__,
+            },
         )
-        wandb.watch(net)
 
-        checkpoint_fpath = project_dir/(
-            "models/"
-            f"{wandb.run.name}__{config['model']}__checkpoint.tar"
-        )
+    wandb.watch(net)
 
-    logger.info(f"Training {config['model']} model")
-    logger.info(f"optimizer = {config['optimizer']}")
-    logger.info(f"learning rate = {config['learning_rate']}")
-    logger.info(f"batch size = {config['batch_size']}")
-    logger.info(f"loss function = {config['loss_func']}")
+    logger.info(f"Wandb set up. Run ID: {wandb.run.id}")
+
+    logger.info(f"Training {wandb.run.config['model']} model")
+    logger.info(f"optimizer = {wandb.run.config['optimizer']}")
+    logger.info(f"learning rate = {wandb.run.config['learning_rate']}")
+    logger.info(f"batch size = {wandb.run.config['batch_size']}")
+    logger.info(f"loss function = {wandb.run.config['loss_func']}")
 
     logger.info('Preparing data')
     dataset = FimacDataset(project_dir/'data/interim/renders.hdf5')
@@ -228,7 +215,7 @@ def main(epochs, frac, checkpoint):
     scaler = GradScaler()
 
     while epoch < epochs:
-        logger.info(f"Epoch {epoch} started")
+        logger.info(f"Epoch {epoch} started ({epoch+1}/{epochs})")
         epoch_start_time = time()
 
         # train
@@ -258,15 +245,15 @@ def main(epochs, frac, checkpoint):
             "val_acc": val_acc,
         }, step=epoch, commit=True)
 
-        logger.info(f"Saving checkpoint at {checkpoint_fpath}.")
+        logger.info(f"Saving checkpoint")
         checkpoint = {
-            'config': config,
             'epoch': epoch,
-            'wandb_run_id': wandb.run.id,
             'model_state_dict': net.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
         }
-        torch.save(checkpoint, checkpoint_fpath)
+        # torch.save(checkpoint, checkpoint_fpath)
+        torch.save(checkpoint, Path(wandb.run.dir)/'checkpoint.tar')
+        wandb.save('checkpoint.tar')
 
         epoch_end_time = time()
         logger.info(
@@ -276,9 +263,8 @@ def main(epochs, frac, checkpoint):
 
         epoch += 1
 
-    model_fpath = project_dir/f"models/{wandb.run.name}__{config['model']}.pth"
-    torch.save(net.state_dict(), model_fpath)
-    logger.info(f"Model saved at {model_fpath}")
+    logger.info(f"Saving model")
+    torch.save(net.state_dict(), Path(wandb.run.dir)/'model.tar')
 
     wandb.finish()
     logger.info('Training finished!')
