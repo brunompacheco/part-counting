@@ -60,6 +60,9 @@ class Trainer():
         lr: learning rate.
         optimizer: optimizer (name of a optimizer inside `torch.optim`).
         loss_func: a valid PyTorch loss function.
+        lr_scheduler: if a scheduler is to be used, provide the name of a valid
+        `torch.optim.lr_scheduler`.
+        lr_scheduler_params: parameters of selected `lr_scheduler`.
         frac: fraction of the data to be used (train + validation).
         batch_size: batch_size for training.
         device: see `torch.device`.
@@ -67,9 +70,11 @@ class Trainer():
         random_seed: if not None (default = 42), fixes randomness for Python,
         NumPy as PyTorch (makes trainig reproducible).
     """
-    def __init__(self, net: nn.Module, epochs=5, lr= 0.01, optimizer: str = 'SGD',
-                 loss_func: str = 'L1Loss', frac=1.0, batch_size=16, device=None,
-                 logger=None, random_seed=42) -> None:
+    def __init__(self, net: nn.Module, epochs=5, lr= 0.01,
+                 optimizer: str = 'SGD', loss_func: str = 'L1Loss',
+                 lr_scheduler: str = None, lr_scheduler_params: dict = None,
+                 frac=1.0, batch_size=16, device=None, logger=None,
+                 random_seed=42) -> None:
         self._is_initalized = False
 
         self._e = 0  # inital epoch
@@ -88,6 +93,8 @@ class Trainer():
         self.net = net.to(self.device)
         self.optimizer = optimizer
         self.loss_func = loss_func
+        self.lr_scheduler = lr_scheduler
+        self.lr_scheduler_params = lr_scheduler_params
 
         self.frac = frac
 
@@ -129,6 +136,11 @@ class Trainer():
         net = net.to(wandb.config['device'])
         net.load_state_dict(checkpoint['model_state_dict'])
 
+        # fix for older versions
+        if 'lr_scheduler' not in wandb.config.keys():
+            wandb.config['lr_scheduler'] = None
+            wandb.config['lr_scheduler_params'] = None
+
         # create trainer instance
         self = cls(
             epochs=wandb.config['epochs'],
@@ -136,6 +148,8 @@ class Trainer():
             lr=wandb.config['learning_rate'],
             optimizer=wandb.config['optimizer'],
             loss_func=wandb.config['loss_func'],
+            lr_scheduler=wandb.config['lr_scheduler'],
+            lr_scheduler_params=wandb.config['lr_scheduler_params'],
             frac=wandb.config['data_fraction'],
             batch_size=wandb.config['batch_size'],
             device=wandb.config['device'],
@@ -166,6 +180,10 @@ class Trainer():
             lr=self.lr
         )
 
+        if self.lr_scheduler is not None:
+            Scheduler = eval(f"torch.optim.lr_scheduler.{self.lr_scheduler}")
+            self._scheduler = Scheduler(self._optim, **self.lr_scheduler_params)
+
         self._loss_func = eval(f"nn.{self.loss_func}()")
 
         self.l.info('Initializing wandb.')
@@ -187,6 +205,8 @@ class Trainer():
                 "batch_size": self.batch_size,
                 "model": type(self.net).__name__,
                 "optimizer": self.optimizer,
+                "lr_scheduler": self.lr_scheduler,
+                "lr_scheduler_params": self.lr_scheduler_params,
                 "loss_func": self.loss_func,
                 "random_seed": self.random_seed,
                 "device": self.device,
@@ -270,8 +290,10 @@ class Trainer():
 
                 with autocast():
                     y_hat = self.net(X)
-                    loss = self._loss_func(y_hat.squeeze(),
-                                          y.type(torch.float32))
+                    loss = self._loss_func(
+                        y_hat.squeeze(),
+                        y.type(torch.float32) / 100  # scale to 0-1 range
+                    )
 
                 scaler.scale(loss).backward()
 
@@ -279,6 +301,9 @@ class Trainer():
 
                 scaler.step(self._optim)
                 scaler.update()
+            
+            if self.lr_scheduler is not None:
+                self._scheduler.step()
 
         # scale to data size
         train_loss = train_loss / len(self._dataloader['train'].dataset)
@@ -300,12 +325,14 @@ class Trainer():
                     y_hat = self.net(X)
                     loss_value = self._loss_func(
                         y_hat.squeeze(),
-                        y.type(torch.float32)
+                        y.type(torch.float32) / 100  # scale to 0-1 range
                     ).item()
 
                 val_loss += loss_value * len(y)  # scales to data size
-                val_MAE += int_MAE(y, y_hat.squeeze()) * len(y)
-                val_acc += acc(y, y_hat.squeeze()) * len(y)
+
+                y_hat = y_hat.squeeze() * 100  # scale to 0-100 range
+                val_MAE += int_MAE(y, y_hat) * len(y)
+                val_acc += acc(y, y_hat) * len(y)
 
         # scale to data size
         len_data = len(self._dataloader['val'].dataset)
