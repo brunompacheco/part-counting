@@ -66,6 +66,7 @@ class Trainer():
         frac: fraction of the data to be used (train + validation).
         batch_size: batch_size for training.
         device: see `torch.device`.
+        wandb_project: W&B project where to log and store model.
         logger: see `logging`.
         random_seed: if not None (default = 42), fixes randomness for Python,
         NumPy as PyTorch (makes trainig reproducible).
@@ -73,7 +74,8 @@ class Trainer():
     def __init__(self, net: nn.Module, epochs=5, lr= 0.01,
                  optimizer: str = 'SGD', loss_func: str = 'L1Loss',
                  lr_scheduler: str = None, lr_scheduler_params: dict = None,
-                 frac=1.0, batch_size=16, device=None, logger=None,
+                 frac=1.0, batch_size=16, device=None,
+                 wandb_project="part-counting-regressor", logger=None,
                  random_seed=42) -> None:
         self._is_initalized = False
 
@@ -112,8 +114,11 @@ class Trainer():
 
         self.best_val = float('inf')
 
+        self.wandb_project = wandb_project
+
     @classmethod
-    def load_trainer(cls, run_id: str, logger=None):
+    def load_trainer(cls, run_id: str, wandb_project="part-counting-regressor",
+                     logger=None):
         """Load a previously initialized trainer from wandb.
 
         Loads checkpoint from wandb and create the instance.
@@ -123,7 +128,7 @@ class Trainer():
             logger: same as the attribute.
         """
         wandb.init(
-            project="part-counting",
+            project=wandb_project,
             entity="brunompac",
             id=run_id,
             resume='must',
@@ -156,6 +161,7 @@ class Trainer():
             batch_size=wandb.config['batch_size'],
             device=wandb.config['device'],
             logger=logger,
+            wandb_project=wandb_project,
             random_seed=wandb.config['random_seed'],
         )
 
@@ -201,7 +207,7 @@ class Trainer():
 
     def initialize_wandb(self):
         wandb.init(
-            project="part-counting",
+            project=self.wandb_project,
             entity="brunompac",
             config={
                 "learning_rate": self.lr,
