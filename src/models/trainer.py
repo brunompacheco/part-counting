@@ -110,6 +110,8 @@ class Trainer():
             random.seed(random_seed)
             torch.manual_seed(random_seed)
 
+        self.best_val = float('inf')
+
     @classmethod
     def load_trainer(cls, run_id: str, logger=None):
         """Load a previously initialized trainer from wandb.
@@ -156,6 +158,9 @@ class Trainer():
             logger=logger,
             random_seed=wandb.config['random_seed'],
         )
+
+        if 'best_val' in checkpoint.keys():
+            self.best_val = checkpoint['best_val']
 
         self._e = checkpoint['epoch'] + 1
 
@@ -264,6 +269,12 @@ class Trainer():
             self.l.info(f"Saving checkpoint")
             self.save_checkpoint()
 
+            if val_MAE < self.best_val:
+                self.l.info(f"Saving best model")
+                self.save_model(name='model_best')
+
+                self.best_val = val_MAE
+
             epoch_end_time = time()
             self.l.info(
                 f"Epoch {self._e} finished and took "
@@ -273,7 +284,7 @@ class Trainer():
             self._e += 1
 
         self.l.info(f"Saving model")
-        self.save_model()
+        self.save_model(name='model_last')
 
         wandb.finish()
         self.l.info('Training finished!')
@@ -301,7 +312,7 @@ class Trainer():
 
                 scaler.step(self._optim)
                 scaler.update()
-            
+
             if self.lr_scheduler is not None:
                 self._scheduler.step()
 
@@ -345,13 +356,19 @@ class Trainer():
     def save_checkpoint(self):
         checkpoint = {
             'epoch': self._e,
+            'best_val': self.best_val,
             'model_state_dict': self.net.state_dict(),
             'optimizer_state_dict': self._optim.state_dict(),
         }
 
         torch.save(checkpoint, Path(wandb.run.dir)/'checkpoint.tar')
         wandb.save('checkpoint.tar')
-    
-    def save_model(self):
-        torch.save(self.net.state_dict(), Path(wandb.run.dir)/'model.tar')
-        wandb.save('model.tar')
+
+    def save_model(self, name='model'):
+        fname = f"{name}.pth"
+        fpath = Path(wandb.run.dir)/fname
+
+        torch.save(self.net.state_dict(), fpath)
+        wandb.save(fname)
+
+        return fpath
