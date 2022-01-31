@@ -50,7 +50,7 @@ class EffNetRegressor(nn.Module):
     regressor, for obvious reasons. Finally, I freeze the remaining weights
     *except* for the `stem` block.
     """
-    def __init__(self):
+    def __init__(self, freeze=True):
         super().__init__()
 
         self.input = nn.Sequential(
@@ -70,11 +70,12 @@ class EffNetRegressor(nn.Module):
             nn.Linear(40, 1),
         )
 
-        # freeze EffNet's layers and features
-        for param in self.effnet.layers.parameters():
-            param.requires_grad = False
-        for param in self.effnet.features.parameters():
-            param.requires_grad = False
+        if freeze:
+            # freeze EffNet's layers and features
+            for param in self.effnet.layers.parameters():
+                param.requires_grad = False
+            for param in self.effnet.features.parameters():
+                param.requires_grad = False
 
     def forward(self, x):
         x = self.input(x)
