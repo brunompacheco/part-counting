@@ -6,6 +6,7 @@ from typing import Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import wandb
 
 
 class TestNet(nn.Module):
@@ -100,3 +101,13 @@ def load_model(model_fpath: Union[str, Path]) -> nn.Module:
     model.load_state_dict(torch.load(model_fpath))
 
     return model
+
+def load_from_wandb(net: nn.Module, run_id: str,
+                    project='part-counting-regressor'):
+    best_model_file = wandb.restore(
+        'model_best.pth',
+        run_path=f"brunompac/{project}/{run_id}",
+    )
+    net.load_state_dict(torch.load(best_model_file.name))
+
+    return net
