@@ -7,6 +7,12 @@ One approach is to use computer vision "traditional" techniques to achieve the e
 
 The other is to use straightforward deep learning (convolutional encoder with fully-connected decoder). The problem is easily framed as a superviserd learning, regression task.
 
+Deep-learning model
+------------
+
+A baseline model was trained, both to have a performance reference and to test the training and inference routines. This model consisted of two convolutional layers (convolution->ReLU->MaxPooling) followed by two fully-connected  with dropout.
+
+Then, a transfer learning + fine-tuning approach based on EfficientNet was implemented. The experiments are tracked in wandb (see [transfer learning](https://wandb.ai/brunompac/part-counting-transfer-learning/) and [fine-tuning](https://wandb.ai/brunompac/part-counting-fine-tuning) experiments).
 
 Project Organization
 ------------
@@ -53,7 +59,7 @@ Project Organization
         │
         └── visualization  <- Scripts to create exploratory and results oriented visualizations
             └── visualize.py
-     
+
 
 --------
 
