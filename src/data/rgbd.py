@@ -1,28 +1,53 @@
+import cv2
 import numpy as np
 import open3d as o3d
 
 from pathlib import Path
 
 
-def load_rgbd(image_fpath: Path, depth_scale=711.1111111 / 0.05
-    ) -> o3d.geometry.RGBDImage:
+def load_rgbd(image_fpath: Path, c: tuple, f: float) -> o3d.geometry.RGBDImage:
     """Load .png image and build Open3D's RGBDImage.
 
     Args:
         image_fpath: path to .png with grayscale in the blue channel and depth
         in the green channel.
-        depth_scale: see `o3d.geometry.RGBDImage.create_from_color_and_depth`.
-    
+
     Returns:
         rgbd: Open3D RGBD image.
     """
-    image = o3d.io.read_image(str(image_fpath))
-    image_data = np.asarray(image)
+    image_fpath = Path(image_fpath)
 
-    color_image = o3d.geometry.Image((image_data[:,:,2] / 255).astype('float32'))
-    # depth_image = o3d.geometry.Image((1.371349 - 0.928849 - (1.371349 - 0.928849) * np.power(image_data[:,:,1].astype(float), 2) / np.square(255)).astype('float32'))
-    depth_image = o3d.geometry.Image((1.371349 - 0.928849 - (1.371349 - 0.928849) * image_data[:,:,1].astype(float) / 255).astype('float32'))
+    image_data = cv2.imread(
+        str(image_fpath),
+        cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH
+    )
+    color = image_data[:,:,0]
+    distance = image_data[:,:,1]  # distance to the camera
+
+    # fix scale
+    # near = 0.928849
+    # far = 1.371349
+    near = 0.5
+    far = 1.5
+    distance = near + distance * (far - near)
+
+    rows, cols = distance.shape
+    x_px, y_px = np.meshgrid(np.arange(cols), np.arange(rows), sparse=True)
+    x_px = x_px - c[0]
+    y_px = y_px - c[1]
+
+    # pixel distance to image center
+    d_px = np.sqrt(np.square(x_px) + np.square(y_px))
+
+    # pixel distance to camera
+    z_px = np.sqrt(np.square(d_px) + np.square(f))
+
+    # convert distance to camera to depth from camera level
+    depth = distance * f / z_px
+
+    color_image = o3d.geometry.Image(np.sqrt(color.astype('float32')))
+    depth_image = o3d.geometry.Image(depth.astype('float32'))
 
     return o3d.geometry.RGBDImage.create_from_color_and_depth(
-        color_image, depth_image, depth_scale=depth_scale, depth_trunc=711.1111111 / 0.0005
+        color_image, depth_image, depth_scale=1, depth_trunc=far
     )
