@@ -5,12 +5,15 @@ import open3d as o3d
 from pathlib import Path
 
 
-def load_rgbd(image_fpath: Path, c: tuple, f: float) -> o3d.geometry.RGBDImage:
+def load_rgbd(image_fpath: Path, c: tuple, f: float, scale=(0.5, 1.5)) -> o3d.geometry.RGBDImage:
     """Load .png image and build Open3D's RGBDImage.
 
     Args:
-        image_fpath: path to .png with grayscale in the blue channel and depth
-        in the green channel.
+        image_fpath: path to .exr with grayscale in the first channel and depth
+        in the second channel.
+        c: focal point of the image (in pixels).
+        f: focal distance (in pixels).
+        scale: offset and max of the depth, in meters.
 
     Returns:
         rgbd: Open3D RGBD image.
@@ -27,8 +30,8 @@ def load_rgbd(image_fpath: Path, c: tuple, f: float) -> o3d.geometry.RGBDImage:
     # fix scale
     # near = 0.928849
     # far = 1.371349
-    near = 0.5
-    far = 1.5
+    near = scale[0]
+    far = scale[1]
     distance = near + distance * (far - near)
 
     rows, cols = distance.shape
