@@ -29,7 +29,7 @@ def get_lines(image: np.ndarray, canny_sigma=1, angle_range=np.pi/8
     # compute edges
     edges = canny(image_, sigma=canny_sigma)
 
-    v_angles = np.linspace(-angle_range, angle_range, 180, endpoint=True)
+    v_angles = np.linspace(-angle_range, angle_range, 90, endpoint=True)
     h_angles = np.linspace(np.pi/2-angle_range, np.pi/2+angle_range, 180, endpoint=True)
 
     h, theta, d = hough_line(edges, theta=v_angles)
