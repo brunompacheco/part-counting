@@ -1,8 +1,10 @@
 import numpy as np
+import open3d as o3d
 
 from typing import Tuple
 
 from skimage.feature import canny
+from skimage.measure import label
 from skimage.transform import hough_line, hough_line_peaks
 from sklearn.cluster import DBSCAN
 
@@ -132,3 +134,57 @@ def get_box_mask(shape: tuple,
             mask = mask & (idx[0] < f(idx[1]))
 
     return mask
+
+def fill_binary(mask):
+    """Works best if `mask` is convex.
+    """
+    x, y = np.indices(mask.shape)
+
+    x_max = np.max(x, initial=0, where=mask, axis=0)
+    x_min = np.min(x, initial=mask.shape[0], where=mask, axis=0)
+
+    y_max = np.max(y, initial=0, where=mask, axis=1)
+    y_min = np.min(y, initial=mask.shape[1], where=mask, axis=1)
+
+    return   (x >= x_min) \
+           & (x <= x_max) \
+           & (y >= y_min.reshape((-1,1))) \
+           & (y <= y_max.reshape((-1,1)))
+
+def largest_connected_component(mask):
+    """Return connected component with larges (filled) area.
+
+    Fills connected components using `fill_binary` above before calculating
+    size.
+    """
+    labeled, num = label(mask, background=0, return_num=True)
+
+    labels_sizes = [np.sum(fill_binary(labeled == i)) for i in range(1,num+1)]
+
+    biggest_label = np.argmax(labels_sizes) + 1
+
+    return labeled == biggest_label
+
+def box_mask_from_rgbd(rgbd: o3d.geometry.RGBDImage) -> np.ndarray:
+    """Get interior box mask for RGBD image.
+
+    It is expected that the depth channel of the RGBD image contains depths in
+    the range of 0 to 1.5 meters.
+
+    Returns:
+        mask: binary mask of the interior of the box in the shape of the input
+        image.
+    """
+    depth = np.asarray(rgbd.depth)
+
+    top = (1.5 - depth) >= 0.5  # top of the box
+
+    # remove everything (like parts) but the box border (and parts touching it)
+    top = largest_connected_component(top)
+
+    v_lines, h_lines = get_lines(top)
+    
+    v_lines = pick_similar_lines(v_lines[0], v_lines[1])
+    h_lines = pick_similar_lines(h_lines[0], h_lines[1])
+    
+    return get_box_mask(top.shape, h_lines, v_lines)
