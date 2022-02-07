@@ -5,7 +5,8 @@ import open3d as o3d
 from pathlib import Path
 
 
-def load_rgbd(image_fpath: Path, c: tuple, f: float, scale=(0.5, 1.5)) -> o3d.geometry.RGBDImage:
+def load_rgbd(image_fpath: Path, c=(256, 256), f=711.1111, scale=(0.5, 1.5)
+             ) -> o3d.geometry.RGBDImage:
     """Load .png image and build Open3D's RGBDImage.
 
     Args:
