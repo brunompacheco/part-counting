@@ -5,8 +5,11 @@ from typing import Tuple
 
 from skimage.feature import canny
 from skimage.measure import label
+from skimage.morphology import binary_dilation
 from skimage.transform import hough_line, hough_line_peaks
 from sklearn.cluster import DBSCAN
+
+from src.data.pcd import load_pcd
 
 
 def get_lines(image: np.ndarray, canny_sigma=1, angle_range=np.pi/8
@@ -188,3 +191,54 @@ def box_mask_from_rgbd(rgbd: o3d.geometry.RGBDImage) -> np.ndarray:
     h_lines = pick_similar_lines(h_lines[0], h_lines[1])
     
     return get_box_mask(top.shape, h_lines, v_lines)
+
+def mask_selection_volume(rgbd: o3d.geometry.RGBDImage, mask: np.array,
+                          border_size=20) -> o3d.visualization.SelectionPolygonVolume:
+    """Get selection volume (3D) of the box mask.
+
+    Args:
+        rgbd: RGBD image to generate the point cloud from.
+        mask: mask of the interior of the box. see `box_mask_from_rgbd`.
+        border_size: number of pixels to dillate the mask as to capture enough
+        of the border of the box.
+    """
+    depth = np.array(rgbd.depth)
+
+    # get box border
+    border = binary_dilation(mask, np.ones((border_size,border_size))) ^ mask
+
+    border_depth = np.median(depth, where=border)
+
+    # crate RGBD image of the mask
+    box_pcd_depth = 2 * np.ones(mask.shape)
+    box_pcd_depth[mask] = border_depth
+
+    mask_rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
+        o3d.geometry.Image(np.ones(box_pcd_depth.shape).astype('uint8') * 25),
+        o3d.geometry.Image((255 * box_pcd_depth / 2).astype('uint8')),
+        depth_scale=0.5,
+        depth_trunc=2.0
+    )
+
+    # get selection volume vertices from the PCD generated from the mask RGBD
+    mask_points = load_pcd(mask_rgbd).points
+
+    main_diagonal = [p[0] + p[1] for p in mask_points]
+    secondary_diagonal = [-p[0] + p[1] for p in mask_points]
+
+    ne = mask_points[np.argmax(main_diagonal)]
+    sw = mask_points[np.argmin(main_diagonal)]
+
+    nw = mask_points[np.argmax(secondary_diagonal)]
+    se = mask_points[np.argmin(secondary_diagonal)]
+
+    polygon = np.array([ne, se, sw, nw])
+
+    # create selection polygon
+    vol = o3d.visualization.SelectionPolygonVolume()
+    vol.orthogonal_axis = "Z"
+    vol.axis_min = 0
+    vol.axis_max = 1.5
+    vol.bounding_polygon = o3d.utility.Vector3dVector(polygon)
+
+    return vol
