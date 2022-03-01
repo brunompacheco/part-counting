@@ -207,7 +207,7 @@ def mask_selection_volume(rgbd: o3d.geometry.RGBDImage, mask: np.array,
     # get box border
     border = binary_dilation(mask, np.ones((border_size,border_size))) ^ mask
 
-    border_depth = np.median(depth, where=border)
+    border_depth = np.mean(depth, where=border)
 
     # crate RGBD image of the mask
     box_pcd_depth = 2 * np.ones(mask.shape)
