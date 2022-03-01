@@ -51,7 +51,7 @@ class EffNetRegressor(nn.Module):
     regressor, for obvious reasons. Finally, I freeze the remaining weights
     *except* for the `stem` block.
     """
-    def __init__(self, freeze=True):
+    def __init__(self, freeze=True, pretrained=True, effnet_size='b0', hidden_layer_size=40):
         super().__init__()
 
         self.input = nn.Sequential(
@@ -61,14 +61,15 @@ class EffNetRegressor(nn.Module):
         )
 
         self.effnet = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub',
-                                     'nvidia_efficientnet_b0',
-                                     pretrained=True)
+                                     f'nvidia_efficientnet_{effnet_size}',
+                                     pretrained=pretrained)
 
         # change EffNet classifier to a regressor
+        sequential_in = 1280 if effnet_size == 'b0' else 1792
         self.effnet.classifier.fc = nn.Sequential(
-            nn.Linear(1280, 40),
+            nn.Linear(sequential_in, hidden_layer_size),
             nn.ReLU(),
-            nn.Linear(40, 1),
+            nn.Linear(hidden_layer_size, 1),
         )
 
         if freeze:
@@ -103,7 +104,7 @@ def load_model(model_fpath: Union[str, Path]) -> nn.Module:
     return model
 
 def load_from_wandb(net: nn.Module, run_id: str,
-                    project='part-counting-regressor'):
+                    project='part-counting-transfer-learning'):
     best_model_file = wandb.restore(
         'model_best.pth',
         run_path=f"brunompac/{project}/{run_id}",
