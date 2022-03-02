@@ -55,3 +55,24 @@ def voxel2np(v_grid: o3d.geometry.VoxelGrid, pos: np.array, shape: np.array,
         return grid_bottom & grid_top
     elif mode == 'reverse-shadow':
         return grid_top
+
+def dig_box(box_grid: np.ndarray, part: o3d.geometry.PointCloud,
+            grid_pos: tuple, grid_shape: tuple, pos: tuple,
+            voxel_size: float) -> np.ndarray:
+    """Dig part at `pos` from box grid.
+    """
+    tx, ty, tz, rx, ry, rz = pos
+
+    part_ = o3d.geometry.PointCloud(part)
+
+    part_.translate(np.array([tx, ty, tz]))
+
+    part_.rotate(
+        o3d.geometry.get_rotation_matrix_from_xyz(np.array([rx, ry, rz]))
+    )
+
+    part_voxel = o3d.geometry.VoxelGrid.create_from_point_cloud(part_, voxel_size)
+
+    part_grid = voxel2np(part_voxel, grid_pos, grid_shape, mode='reverse-shadow')
+
+    return box_grid & ~(box_grid & part_grid)
