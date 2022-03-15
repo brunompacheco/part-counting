@@ -66,14 +66,23 @@ def preprocess_box_for_dl(img_fpath: Path, device: torch.device = None) -> torch
         X: Image loaded in a batch-like format (batch with a single sample),
         proper for feeding to a model.
     """
+    from torchvision import transforms as T
+
     if device is None:
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-    data = np.array(o3d.io.read_image(str(img_fpath)))
-    # swap axis so that channels is the first axis
-    data = np.moveaxis(data[:,:,1:3], -1, 0)
+    transform = T.Compose([
+        T.ToTensor(),
+        # normalize required for pre-trained image models,
+        # check https://pytorch.org/vision/stable/models.html
+        T.Normalize(mean=[0.485, 0.456], std=[0.229, 0.224]),
+    ])
 
-    X = torch.from_numpy(data).unsqueeze(0)
+    data = np.array(o3d.io.read_image(str(img_fpath)))
+    data = data[:,:,1:3]
+
+    X = transform(data)
+    X = X.unsqueeze(0)
     X = X.type(torch.FloatTensor)
     X = X.to(device)
 
