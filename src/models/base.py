@@ -95,7 +95,7 @@ def load_linreg_model(
 
         X = np.array(vol).reshape(-1,1)
 
-        return lr.predict(X)[0]
+        return lr.predict(X)[0] * 100
 
     return model
 
