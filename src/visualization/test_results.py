@@ -77,6 +77,9 @@ if __name__ == '__main__':
     for model in df['model'].unique():
         df_ = df[df['model'] == model]
 
+        hits = (df_['y_hat'] + 0.5).astype(int) == df_['y']
+        acc = hits.sum() / hits.size
+
         err_mean = df_.groupby('y')['error'].mean()
         err_std = df_.groupby('y')['error'].std()
 
@@ -86,7 +89,7 @@ if __name__ == '__main__':
             err_mean - err_std,
             alpha=0.5
         )
-        ax.plot(err_mean, label=model)
+        ax.plot(err_mean, label=f"{model} (Acc. = {acc*100:.1f}%)")
 
     ax.set_xlim(0, 100)
 
