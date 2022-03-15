@@ -7,14 +7,12 @@ from pathlib import Path
 from time import time
 
 import numpy as np
-import open3d as o3d
-import torch
 
 from dotenv import load_dotenv, find_dotenv
 from tqdm import tqdm
 
 from src.features.base import preprocess_box_for_cv, preprocess_box_for_dl
-from src.models.base import load_dl_model, load_pso_model
+from src.models.base import load_dl_model, load_linreg_model, load_polyfit_model, load_pso_model
 
 
 # find .env automagically by walking up directories until it's found
@@ -45,9 +43,8 @@ if __name__ == '__main__':
     model_loads = {
         'pso': load_pso_model,
         'effnet': load_dl_model,
-        # TODO:
-        # 'linreg': ,
-        # 'polyfit': ,
+        'linreg': load_linreg_model,
+        'polyfit': load_polyfit_model,
     }
     model_load = model_loads[model_name]
 
