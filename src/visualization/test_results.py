@@ -70,6 +70,23 @@ if __name__ == '__main__':
     fig.savefig(project_dir/'reports/figures/error_boxplot.pdf')
     plt.close(fig)
 
+    # inference times
+    fig, ax = plt.subplots()
+    fig.set_size_inches(8,8)
+
+    df.boxplot('t', 'model', ax=ax)
+
+    ax.set_title('Prediction time')
+    ax.set_xlabel('Models')
+    ax.set_ylabel('Time')
+
+    # ax.set_ylim(-1, ax.get_ylim()[1])
+    ax.set_yscale('log')
+    ax.grid(False)
+
+    fig.savefig(project_dir/'reports/figures/time_boxplot.pdf')
+    plt.close(fig)
+
     # performance by number of parts
     fig, ax = plt.subplots()
     fig.set_size_inches(8,8)
