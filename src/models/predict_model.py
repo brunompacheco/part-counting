@@ -118,7 +118,10 @@ if __name__ == '__main__':
 
         start_time = time()
 
-        data = preprocess(img_fpath)
+        try:
+            data = preprocess(img_fpath)
+        except:
+            continue
 
         preds[img_fpath.name] = model(data)
         times[img_fpath.name] = time() - start_time
