@@ -64,7 +64,7 @@ def load_dl_model(run_id: str = '13mhcjex',
         with torch.no_grad():
             y = net(X)
 
-        return y.item()
+        return y.item() * 100
 
     return model
 
@@ -95,7 +95,7 @@ def load_linreg_model(
 
         X = np.array(vol).reshape(-1,1)
 
-        return lr.predict(X)[0] * 100
+        return lr.predict(X)[0]
 
     return model
 
@@ -121,6 +121,8 @@ def load_polyfit_model(
     def model(box):
         vol = estimate_volume(box, voxel_size=voxel_size)
 
-        return sum([p[i] * vol**i for i in range(len(p))])
+        n = len(p)
+
+        return sum([p[i] * vol**(n-i-1) for i in range(n)])
 
     return model
