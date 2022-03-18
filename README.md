@@ -1,24 +1,59 @@
-[WIP] part_counting
+Counting parts in an RGBD image.
 ==============================
 
-Two approaches are proposed to counting parts in an RGBD image. The goal is to properly estimate the amount of parts, all of the same geometry, in a steel box. As the project is motivated by the occlusion of many parts in said box, it was framed as a estimation/regression problem rather than an object detection one. All images were generated through renders of simulations, using blender.
+![Sample image](reports/figures/sample_image.png)
 
-One approach is to use computer vision "traditional" techniques to achieve the estimate. Registration algorithms are used to "dig" the part's geometry from the surface measured (depth channel).
+The goal is to try different approaches to properly estimate the amount of parts in a box using only an RGBD image taken from above. Two lines are approached to solve this problem: deep-learning based and "classic" computer vision techniques. As the challenge of the project arises in the occlusion of many parts in the box, it was framed as estimation/regression rather than object detection.
 
-The other is to use straightforward deep learning (convolutional encoder with fully-connected decoder). The problem is easily framed as a superviserd learning, regression task.
+Data
+------------
+
+The images contain multiple (0-100) parts, all of the same geometry, in a steel box. We use synthetic data generated using Blender, simulating a perfect RGBD camera. The images were rendered upon physical simulations of the parts being dropped in the box. Small variations (e.g., lightining, box grid) were introduced. Only two channels were stored: grayscale and depth.
 
 Deep-learning model
 ------------
 
-A baseline model was trained, both to have a performance reference and to test the training and inference routines. This model consisted of two convolutional layers (convolution->ReLU->MaxPooling) followed by two fully-connected  with dropout.
+We approach the task using EfficientNet's feature extractor followed by a fully-connected decoder. The model was implemented and trained using PyTorch and the experiments were tracked using weights and biases (see [transfer learning](https://wandb.ai/brunompac/part-counting-transfer-learning) and [fine-tuning](https://wandb.ai/brunompac/part-counting-fine-tuning) experiments). The model was implemented in `src.models.model.EffNetRegressor`. All training was done through `src.models.trainer.Trainer`, see `src/models/train_model.py` for example uses.
 
-Then, a transfer learning + fine-tuning approach based on EfficientNet was implemented. The experiments are tracked in wandb (see [transfer learning](https://wandb.ai/brunompac/part-counting-transfer-learning/) and [fine-tuning](https://wandb.ai/brunompac/part-counting-fine-tuning) experiments).
+Computer Vision
+------------
+
+Without using any deep-learning to extract the features, we first extract the information of the parts inside the box. For this, we extract the mask of the inside of the box using Canny+Hough to get the lines of the border of the box (see src/). Then, the RGBD image is converted to point cloud, which is cropped based on the polygon defined by the mask. This results in a point cloud containing only the surface of the parts.
+
+From the preprocessed point cloud, two approaches are experimented. First, an alignment approach is implemented to "dig" parts out of the image. The point cloud is converted to a voxel grid together with the model of the part. The part is then aligned to the voxelized surface using Particle-Swarm Optimization (other algorithms were tested, but PSO had the best results, even though it is very costly). The aligned part is the removed from the voxelized surface, effectively digging the voxel grid. This process is repeated until no more parts fit the voxel grid of the surface. This is implemented in `src.models.pso.dig_and_predict`.
+
+As an alternative, naïve approach, the volume occupied is estimated from the voxelization of the surface. The number of parts is estimated from the volume using a linear regression and a polynomial curve fitted. See `src/models/regression.py`.
+
+Results
+------------
+
+TODO
+
+Example
+------------
+
+Useful interface functions are provided for all approaches for prediction. Example DL prediction:
+
+```python
+from src.features import preprocess_box_for_dl
+from src.models import load_dl_model
+
+img_fpath = 'path/to/img.png'
+
+model = load_dl_model()
+
+box = preprocess_box_for_dl(img_fpath)
+
+n_parts = model(box)
+```
+
+Similar functions exist for the other approaches. See `src/models/base.py` and `src/features/base.py`. In `src/models/predict_model.py` is an example use of all of these functions.
 
 Project Organization
 ------------
 
     ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
+    ├── Makefile           <- Makefile with commands like `make data`
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
     │   ├── external       <- Data from third party sources.
@@ -28,13 +63,9 @@ Project Organization
     │
     ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
     │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
+    ├── models             <- Trained models and model predictions
     │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
+    ├── notebooks          <- Jupyter notebooks used for exploration and tests
     │
     ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
     │   └── figures        <- Generated graphics and figures to be used in reporting
@@ -43,19 +74,17 @@ Project Organization
     │                         generated with `pip freeze > requirements.txt`
     │
     ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
-    └── src                <- Source code for use in this project.
+    │
+    └── src                <- Source code for use in this project. Contains all
+        │                     relevant code
         ├── __init__.py    <- Makes src a Python module
         │
         ├── data           <- Scripts to download or generate data
-        │   └── make_dataset.py
         │
         ├── features       <- Scripts to turn raw data into features for modeling
-        │   └── build_features.py
         │
         ├── models         <- Scripts to train models and then use trained models to make
-        │   │                 predictions
-        │   ├── predict_model.py
-        │   └── train_model.py
+        │                     predictions
         │
         └── visualization  <- Scripts to create exploratory and results oriented visualizations
             └── visualize.py
