@@ -47,7 +47,7 @@ def voxel2np(v_grid: o3d.geometry.VoxelGrid, pos: np.array, shape: np.array,
     grid_top = np.zeros(shape, dtype=bool)
     for i in indices:
         if (i > 0).all() and (i < shape).all():
-            grid_top[i[0],i[1],0:i[2]] = True
+            grid_top[i[0],i[1],i[2]:-1] = True
 
     if mode == 'shadow':
         return grid_bottom
@@ -75,4 +75,5 @@ def dig_box(box_grid: np.ndarray, part: o3d.geometry.PointCloud,
 
     part_grid = voxel2np(part_voxel, grid_pos, grid_shape, mode='reverse-shadow')
 
+    # keep only box_grid voxels that are not intersecting part_grid
     return box_grid & ~(box_grid & part_grid)
