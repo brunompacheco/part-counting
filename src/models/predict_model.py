@@ -70,8 +70,8 @@ if __name__ == '__main__':
     logger.info(f'predicting with {model_name} model')
 
     ## definitions
-    preds_fpath = project_dir/f'reports/{model_name}_test_preds.json'
-    times_fpath = project_dir/f'reports/{model_name}_test_times.json'
+    preds_fpath = project_dir/f'models/{model_name}_test_preds.json'
+    times_fpath = project_dir/f'models/{model_name}_test_times.json'
 
     if model_name == 'effnet':
         raw_data_dir = project_dir/'data/raw/render_results'
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     if model_name == 'pso':
         # PSO is too slow to test on the whole set
-        frac = 0.1
+        frac = 0.05
         test_images = np.random.choice(test_images, int(frac * len(test_images)),
                                        replace=False)
 
