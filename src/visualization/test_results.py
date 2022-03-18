@@ -17,7 +17,7 @@ load_dotenv(dotenv_path)
 
 
 if __name__ == '__main__':
-    preds_fpaths = project_dir.glob('reports/*_test_preds.json')
+    preds_fpaths = project_dir.glob('models/*_test_preds.json')
 
     # prepare data
     dfs = list()
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     ax.set_yscale('log')
     ax.grid(False)
 
-    fig.savefig(project_dir/'reports/figures/error_boxplot.pdf')
+    fig.savefig(project_dir/'reports/figures/error_boxplot.png')
     plt.close(fig)
 
     # inference times
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     ax.set_yscale('log')
     ax.grid(False)
 
-    fig.savefig(project_dir/'reports/figures/time_boxplot.pdf')
+    fig.savefig(project_dir/'reports/figures/time_boxplot.png')
     plt.close(fig)
 
     # performance by number of parts
@@ -118,5 +118,5 @@ if __name__ == '__main__':
     ax.legend()
     ax.grid()
 
-    fig.savefig(project_dir/'reports/figures/nparts_error_line.pdf')
+    fig.savefig(project_dir/'reports/figures/nparts_error_line.png')
     plt.close(fig)
