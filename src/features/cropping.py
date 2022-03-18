@@ -16,6 +16,9 @@ def get_lines(image: np.ndarray, canny_sigma=1, angle_range=np.pi/8
     ) -> Tuple[Tuple[np.array,np.array],Tuple[np.array,np.array]]:
     """Find best horizontal and vertical lines that match the box contour.
 
+    Use Canny to compute the edges of `image`. Then, apply the Hough transform
+    to get the lines that match the box border contour.
+
     Args:
         image: numpy array that represents the grayscale image in 0-1 range.
         canny_sigma: sigma value passed to canny.
@@ -172,7 +175,7 @@ def box_mask_from_rgbd(rgbd: o3d.geometry.RGBDImage) -> np.ndarray:
     """Get interior box mask for RGBD image.
 
     It is expected that the depth channel of the RGBD image contains depths in
-    the range of 0 to 1.5 meters.
+    the range of 0 to 1.5 (meters).
 
     Returns:
         mask: binary mask of the interior of the box in the shape of the input
@@ -180,7 +183,8 @@ def box_mask_from_rgbd(rgbd: o3d.geometry.RGBDImage) -> np.ndarray:
     """
     depth = np.asarray(rgbd.depth)
 
-    top = (1.5 - depth) >= 0.5  # top of the box
+    # get only the pixels around (vertically) the border of the box
+    top = (1.5 - depth) >= 0.5  # only pixels higher than 0.5 meters
 
     # remove everything (like parts) but the box border (and parts touching it)
     top = largest_connected_component(top)

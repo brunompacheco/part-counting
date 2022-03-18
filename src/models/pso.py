@@ -124,6 +124,7 @@ def dig_and_predict(box: o3d.geometry.PointCloud, part: o3d.geometry.PointCloud,
             o3d.geometry.get_rotation_matrix_from_xyz(np.array([rx, ry, rz]))
         )
 
+        # conert part to voxel grid
         part_voxel = o3d.geometry.VoxelGrid.create_from_point_cloud(part_, voxel_size)
         part_grid = voxel2np(part_voxel, grid_pos, grid_shape, mode='floating')
 
@@ -131,8 +132,8 @@ def dig_and_predict(box: o3d.geometry.PointCloud, part: o3d.geometry.PointCloud,
         immersion_ratio = (part_grid & box_grid).sum() / part_grid.sum()
 
         if immersion_ratio > 0.60:
-            box_grid = dig_box(box_grid, part, grid_pos, grid_shape,
-                                    pos, voxel_size)
+            box_grid = dig_box(box_grid, part, grid_pos, grid_shape, pos,
+                               voxel_size)
             n += 1
         else:
             break

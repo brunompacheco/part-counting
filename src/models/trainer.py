@@ -52,7 +52,7 @@ def timeit(fun):
     return fun_
 
 class Trainer():
-    """Generice trainer for PyTorch NNs.
+    """Generic trainer for PyTorch NNs.
 
     Attributes:
         net: the neural network to be trained.
@@ -231,7 +231,7 @@ class Trainer():
         self.l.info(f"Wandb set up. Run ID: {self._id}")
 
     def prepare_data(self, split_size=.8):
-        self.dataset = FimacDataset(project_dir/'data/interim/renders.hdf5')
+        self.dataset = FimacDataset(project_dir/'data/processed/renders.hdf5')
 
         train_data, val_data = self.dataset.subset_split(self.frac, split_size)
 

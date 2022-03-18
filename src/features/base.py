@@ -12,6 +12,9 @@ from .cropping import mask_selection_volume, box_mask_from_rgbd
 def preprocess_box_for_cv(img_fpath: Path) -> o3d.geometry.PointCloud:
     """Load and strip walls of box, keeping the interior. For CV-based models.
 
+    The mask of the interior of the box is extracted using Canny+Hough, which
+    is then used to crop the point cloud generated from the RGBD image.
+
     Args:
         img_fpath: Filepath of the .exr image file. Must contain grayscale as
         the first channel and depth as second channel.

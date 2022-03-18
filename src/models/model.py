@@ -1,4 +1,15 @@
-"""Network definitions.
+"""Network definitions and utilitary functions to load them.
+
+    Typical usage example:
+
+    >>> blank_net = EffNetRegressor(
+    ...     freeze=False,
+    ...     pretrained=False,
+    ...     effnet_size='b0',
+    ...     hidden_layer_size=60,
+    ... )
+    >>> net = load_from_wandb(blank_net, '13mhcjex', 'part-counting-fine-tuning')
+    >>> y_hat = net(X)
 """
 from pathlib import Path
 from typing import Union
@@ -10,6 +21,8 @@ import wandb
 
 
 class TestNet(nn.Module):
+    """Simple NN used to test the routines.
+    """
     def __init__(self):
         super().__init__()
 
@@ -48,10 +61,18 @@ class EffNetRegressor(nn.Module):
 
     An input layer is added (Conv2d+BN) to adapt our 2-channel image to the 3
     channels EffNet is expecting. Also, the classifier is replaced by a
-    regressor, for obvious reasons. Finally, I freeze the remaining weights
-    *except* for the `stem` block.
+    regressor, for obvious reasons.
+
+    Attributes:
+        freeze: Freeze the EfficientNet weights *except* for the `stem` block.
+        Used for transfer learning.
+        pretrained: If true, loads EfficientNet weights.
+        effnet_size: Size of the EfficientNet to use. Must be `b0` or `b4`.
+        hidden_layer_size: Number of node in the FC hidden layer in the
+        regressor.
     """
-    def __init__(self, freeze=True, pretrained=True, effnet_size='b0', hidden_layer_size=40):
+    def __init__(self, freeze=True, pretrained=True, effnet_size='b0',
+                 hidden_layer_size=40):
         super().__init__()
 
         self.input = nn.Sequential(
