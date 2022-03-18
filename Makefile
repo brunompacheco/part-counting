@@ -28,8 +28,8 @@ requirements: test_environment
 data: requirements
 	rm -f /data/renders.hdf5
 	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/raw/render_results /data/renders.hdf5 --split
-	rm data/interim/renders.hdf5
-	ln -s /data/renders.hdf5 data/interim/.
+	rm data/processed/renders.hdf5
+	ln -s /data/renders.hdf5 data/processed/.
 	chmod a-w,ug+r /data/renders.hdf5
 
 ## Delete all compiled Python files
