@@ -24,12 +24,7 @@ From the preprocessed point cloud, two approaches are experimented. First, an al
 
 As an alternative, naïve approach, the volume occupied is estimated from the voxelization of the surface. The number of parts is estimated from the volume using a linear regression and a polynomial curve fitted. See `src/models/regression.py`.
 
-Results
-------------
-
-TODO
-
-Example
+Example Use
 ------------
 
 Useful interface functions are provided for all approaches for prediction. Example DL prediction:
@@ -49,8 +44,20 @@ n_parts = model(box)
 
 Similar functions exist for the other approaches. See `src/models/base.py` and `src/features/base.py`. In `src/models/predict_model.py` is an example use of all of these functions.
 
+Results
+------------
+
+None of the DL approach nor the one based on PSO was able to overcome the baseline methods. Still, the inference is much more efficient when done with the EfficientNet.
+
+<p align="center">
+<img src="reports/figures/error_boxplot.png" width="45%" height="45%">
+<img src="reports/figures/time_boxplot.png" width="45%" height="45%">
+</p>
+
 Project Organization
 ------------
+
+The development routine was to explore and experiment using the notebooks and consolidate the development in `src/`, through Python scripts.
 
     ├── LICENSE
     ├── Makefile           <- Makefile with commands like `make data`
