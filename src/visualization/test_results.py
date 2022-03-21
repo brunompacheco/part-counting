@@ -57,14 +57,20 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
     fig.set_size_inches(8,8)
 
-    df.boxplot('t', 'model', ax=ax)
+    bpdict = df.boxplot('t', 'model', ax=ax, return_type='dict')
+    bpdict = bpdict['t']
 
     ax.set_title('Prediction time')
     ax.set_xlabel('Models')
     ax.set_ylabel('Time')
 
     ax.set_yscale('log')
-    ax.grid(False)
+    ax.grid(True)
+
+    curr_labels = [t.get_text() for t in ax.get_xticklabels()]
+    for i, model in enumerate(curr_labels):
+        median = bpdict['medians'][i].get_ydata()[0]
+        plt.annotate(f"{median:.2f}", (i+1.25, median))
 
     fig.suptitle('')
     fig.savefig(project_dir/'reports/figures/time_boxplot.png', bbox_inches='tight')
@@ -127,7 +133,7 @@ if __name__ == '__main__':
 
     for i, model in enumerate(curr_labels):
         median = bpdict['medians'][i].get_ydata()[0]
-        plt.annotate(f"{median:.2f}", (i+1.25, median-0.3))
+        plt.annotate(f"{median:.2f}", (i+1.25, median))
 
     fig.suptitle('')
     fig.savefig(project_dir/'reports/figures/error_boxplot.png', bbox_inches='tight')
