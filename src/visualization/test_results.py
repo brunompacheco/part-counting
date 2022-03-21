@@ -53,23 +53,6 @@ if __name__ == '__main__':
     df['y'] = df['Sim'].apply(lambda s: int(s.split('_')[-1]))
     df['error'] = (df['y'] - df['y_hat']).abs()
 
-    # average performances
-    fig, ax = plt.subplots()
-    fig.set_size_inches(8,8)
-
-    df.boxplot('error', 'model', ax=ax)
-
-    ax.set_title('Performance on the test set')
-    ax.set_xlabel('Models')
-    ax.set_ylabel('Absolute error')
-
-    # ax.set_ylim(-1, ax.get_ylim()[1])
-    ax.set_yscale('log')
-    ax.grid(False)
-
-    fig.savefig(project_dir/'reports/figures/error_boxplot.png')
-    plt.close(fig)
-
     # inference times
     fig, ax = plt.subplots()
     fig.set_size_inches(8,8)
@@ -80,22 +63,25 @@ if __name__ == '__main__':
     ax.set_xlabel('Models')
     ax.set_ylabel('Time')
 
-    # ax.set_ylim(-1, ax.get_ylim()[1])
     ax.set_yscale('log')
     ax.grid(False)
 
-    fig.savefig(project_dir/'reports/figures/time_boxplot.png')
+    fig.suptitle('')
+    fig.savefig(project_dir/'reports/figures/time_boxplot.png', bbox_inches='tight')
     plt.close(fig)
 
     # performance by number of parts
     fig, ax = plt.subplots()
     fig.set_size_inches(8,8)
 
+    labels = dict()
     for model in df['model'].unique():
         df_ = df[df['model'] == model]
 
         hits = (df_['y_hat'] + 0.5).astype(int) == df_['y']
         acc = hits.sum() / hits.size
+
+        labels[model] = f"{model}\n(Acc. = {acc*100:.1f}%)"
 
         err_mean = df_.groupby('y')['error'].mean()
         err_std = df_.groupby('y')['error'].std()
@@ -106,9 +92,10 @@ if __name__ == '__main__':
             err_mean - err_std,
             alpha=0.5
         )
-        ax.plot(err_mean, label=f"{model} (Acc. = {acc*100:.1f}%)")
+        ax.plot(err_mean, label=model)
 
     ax.set_xlim(0, 100)
+    ax.set_ylim(0.1, ax.get_ylim()[1])
 
     ax.set_title('Performance by number of parts in box')
     ax.set_xlabel('Number of parts')
@@ -118,5 +105,25 @@ if __name__ == '__main__':
     ax.legend()
     ax.grid()
 
-    fig.savefig(project_dir/'reports/figures/nparts_error_line.png')
+    fig.savefig(project_dir/'reports/figures/nparts_error_line.png', bbox_inches='tight')
+    plt.close(fig)
+
+    # average performances
+    fig, ax = plt.subplots()
+    fig.set_size_inches(8,8)
+
+    df.boxplot('error', 'model', ax=ax)
+
+    ax.set_title('Performance on the test set')
+    ax.set_xlabel('Models')
+    ax.set_ylabel('Absolute error')
+
+    ax.set_ylim(0., ax.get_ylim()[1])
+    ax.grid(True)
+
+    curr_labels = ax.get_xticklabels()
+    ax.set_xticklabels([labels[model.get_text()] for model in curr_labels])
+
+    fig.suptitle('')
+    fig.savefig(project_dir/'reports/figures/error_boxplot.png', bbox_inches='tight')
     plt.close(fig)
