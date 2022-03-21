@@ -112,7 +112,8 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
     fig.set_size_inches(8,8)
 
-    df.boxplot('error', 'model', ax=ax)
+    bpdict = df.boxplot('error', 'model', ax=ax, return_type='dict')
+    bpdict = bpdict['error']
 
     ax.set_title('Performance on the test set')
     ax.set_xlabel('Models')
@@ -121,8 +122,12 @@ if __name__ == '__main__':
     ax.set_ylim(0., ax.get_ylim()[1])
     ax.grid(True)
 
-    curr_labels = ax.get_xticklabels()
-    ax.set_xticklabels([labels[model.get_text()] for model in curr_labels])
+    curr_labels = [t.get_text() for t in ax.get_xticklabels()]
+    ax.set_xticklabels([labels[model] for model in curr_labels])
+
+    for i, model in enumerate(curr_labels):
+        median = bpdict['medians'][i].get_ydata()[0]
+        plt.annotate(f"{median:.2f}", (i+1.25, median-0.3))
 
     fig.suptitle('')
     fig.savefig(project_dir/'reports/figures/error_boxplot.png', bbox_inches='tight')
